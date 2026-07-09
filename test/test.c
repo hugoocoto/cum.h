@@ -292,15 +292,15 @@ static void test_da_insert(void)
 static void test_da_dup(void)
 {
     TEST("Da_dup values match");
-    { Da(int) da = {0}; Da_append(&da, 10); Da_append(&da, 20); typeof(da) c; c = Da_dup(&da); assert(c.count == 2 && c.items[0]==10 && c.items[1]==20); Da_destroy(&da); Da_destroy(&c); }
+    { Da(int) da = {0}; Da_append(&da, 10); Da_append(&da, 20); Typeof(da) c; c = Da_dup(&da); assert(c.count == 2 && c.items[0]==10 && c.items[1]==20); Da_destroy(&da); Da_destroy(&c); }
     PASS();
 
     TEST("Da_dup is independent copy");
-    { Da(int) da = {0}; Da_append(&da, 1); typeof(da) c; c = Da_dup(&da); da.items[0] = 99; assert(c.items[0] == 1); Da_destroy(&da); Da_destroy(&c); }
+    { Da(int) da = {0}; Da_append(&da, 1); Typeof(da) c; c = Da_dup(&da); da.items[0] = 99; assert(c.items[0] == 1); Da_destroy(&da); Da_destroy(&c); }
     PASS();
 
     TEST("Da_dup float");
-    { Da(float) da = {0}; Da_append(&da, 1.5f); Da_append(&da, 2.5f); typeof(da) c; c = Da_dup(&da); assert(c.items[0]==1.5f && c.items[1]==2.5f); Da_destroy(&da); Da_destroy(&c); }
+    { Da(float) da = {0}; Da_append(&da, 1.5f); Da_append(&da, 2.5f); Typeof(da) c; c = Da_dup(&da); assert(c.items[0]==1.5f && c.items[1]==2.5f); Da_destroy(&da); Da_destroy(&c); }
     PASS();
 }
 

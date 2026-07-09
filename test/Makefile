@@ -1,10 +1,11 @@
 CC ?= cc
 CXX ?= c++
-STD_CFLAGS = -std=gnu99
+STD_CFLAGS = -std=c99
 STD_CXXFLAGS = -std=gnu++11
 WARNINGS = -Wall -Wextra -Wno-missing-field-initializers
 OPT = -O0
 
+.PHONY: test_c test_cpp
 all: test_c test_cpp
 
 test_c: test.c
