@@ -3,6 +3,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <cassert>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <type_traits>
 #include <string>
 #include <vector>
@@ -314,6 +316,29 @@ static void test_da_struct()
     PASS();
 }
 
+/* ======================== Command ======================== */
+
+DECLARE_COMMAND_RUN()
+
+static void test_command()
+{
+    TEST("Command_add appends every arg");
+    { Command c = {0}; Command_add(&c, "sh", "-c", "exit 0"); assert(c.count == 3 && !strcmp(c.items[0], "sh") && !strcmp(c.items[2], "exit 0")); Command_destroy(&c); }
+    PASS();
+
+    TEST("Command_add under an unbraced if");
+    { Command c = {0}; int add = 0; if (add) Command_add(&c, "a", "b", "c"); assert(c.count == 0); Command_destroy(&c); }
+    PASS();
+
+    TEST("Command_run single word command");
+    { Command c = {0}; Command_add(&c, "true"); assert(Command_run(c) == 0); Command_destroy(&c); }
+    PASS();
+
+    TEST("Command_run returns the exit status");
+    { Command c = {0}; Command_add(&c, "sh", "-c", "exit 3"); assert(Command_run(c) == 3); Command_destroy(&c); }
+    PASS();
+}
+
 /* ======================== Stack (Ss) ======================== */
 
 static void test_ss()
@@ -367,6 +392,9 @@ int main()
 
     printf("\n-- Stack --\n");
     test_ss();
+
+    printf("\n-- Command --\n");
+    test_command();
 
     printf("\n%d/%d tests passed\n", npass, ntests);
     return npass == ntests ? 0 : 1;
