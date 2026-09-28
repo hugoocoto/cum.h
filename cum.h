@@ -40,7 +40,11 @@
 #define Let __auto_type
 #endif
 
+#ifdef __cplusplus
+#define Typeof(x) typeof(x)
+#else
 #define Typeof(x) __typeof__(x)
+#endif
 
 /* Type agnostic dynamic array */
 
@@ -124,9 +128,9 @@ typedef Da(char *) Command;
 /* Append args to COMMAND. Wrapped in do/while so it is a single statement: an
  * unbraced `if (x) Command_add(&c, "a", "b");` guards all the appends. The
  * (char *) cast lets string literals in under C++. */
-#define Command_add(command, ...)                                                  \
-        do {                                                                       \
-                __VA_OPT__(EVAL(COMMAND_ADD_INNER(command, __VA_ARGS__));)         \
+#define Command_add(command, ...)                                          \
+        do {                                                               \
+                __VA_OPT__(EVAL(COMMAND_ADD_INNER(command, __VA_ARGS__));) \
         } while (0)
 #define COMMAND_ADD_INNER(command, a, ...) Da_append(command, (char *) (a)) __VA_OPT__(; OBSTRUCT(COMMAND_ADD_INDIRECT)()(command, __VA_ARGS__))
 #define COMMAND_ADD_INDIRECT() COMMAND_ADD_INNER
@@ -136,28 +140,28 @@ typedef Da(char *) Command;
 /* Define Command_run(): run COMMAND and wait for it. Returns its exit status:
  * 127 if exec failed, 1 if fork failed or it was killed by a signal.
  * Needs <stdio.h>, <unistd.h> and <sys/wait.h>. */
-#define DECLARE_COMMAND_RUN()                                              \
-                                                                           \
-        static int Command_run(Command command)                             \
-        {                                                                  \
-                if (command.count < 1) return 1;                           \
-                int status = 0;                                            \
-                int pid    = fork();                                       \
-                if (pid < 0) {                                             \
-                        perror("fork");                                    \
-                        return 1;                                          \
-                }                                                          \
-                if (pid == 0) {                                            \
-                        Da_append(&command, NULL);                         \
-                        execvp(command.items[0], command.items);           \
-                        perror(command.items[0]);                          \
-                        _exit(127); /* exit() would flush stdio twice */   \
-                }                                                          \
-                if (waitpid(pid, &status, 0) == -1) {                      \
-                        perror("waitpid");                                 \
-                        return 1;                                          \
-                }                                                          \
-                return WIFEXITED(status) ? WEXITSTATUS(status) : 1;        \
+#define DECLARE_COMMAND_RUN()                                            \
+                                                                         \
+        static int Command_run(Command command)                          \
+        {                                                                \
+                if (command.count < 1) return 1;                         \
+                int status = 0;                                          \
+                int pid    = fork();                                     \
+                if (pid < 0) {                                           \
+                        perror("fork");                                  \
+                        return 1;                                        \
+                }                                                        \
+                if (pid == 0) {                                          \
+                        Da_append(&command, NULL);                       \
+                        execvp(command.items[0], command.items);         \
+                        perror(command.items[0]);                        \
+                        _exit(127); /* exit() would flush stdio twice */ \
+                }                                                        \
+                if (waitpid(pid, &status, 0) == -1) {                    \
+                        perror("waitpid");                               \
+                        return 1;                                        \
+                }                                                        \
+                return WIFEXITED(status) ? WEXITSTATUS(status) : 1;      \
         }
 
 /* Stack wrapper over DA (LIFO). */
