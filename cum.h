@@ -60,11 +60,16 @@
         do {                                                                                  \
                 if ((da_ptr)->count >= (da_ptr)->capacity) {                                  \
                         (da_ptr)->capacity = (da_ptr)->capacity ? (da_ptr)->capacity * 2 : 4; \
-                        (da_ptr)->items    = (Typeof((da_ptr)->items)) realloc(               \
+                        (da_ptr)->items = (Typeof((da_ptr)->items)) realloc(                  \
                         (da_ptr)->items,                                                      \
                         sizeof(*((da_ptr)->items)) * (da_ptr)->capacity);                     \
                 }                                                                             \
                 (da_ptr)->items[(da_ptr)->count++] = (__VA_ARGS__);                           \
+        } while (0)
+
+#define Da_extend(da_ptr, ...)                                                \
+        do {                                                                  \
+                Da_foreach(_inner_, __VA_ARGS__) Da_append(da_ptr, *_inner_); \
         } while (0)
 
 /* Destroy DA pointed by DA_PTR. */
@@ -75,8 +80,8 @@
                         free((da_ptr)->items);                   \
                 }                                                \
                 (da_ptr)->capacity = 0;                          \
-                (da_ptr)->count    = 0;                          \
-                (da_ptr)->items    = NULL;                       \
+                (da_ptr)->count = 0;                             \
+                (da_ptr)->items = NULL;                          \
         } while (0)
 
 /* Insert element E into DA_PTR at index I. */
@@ -116,7 +121,7 @@
 /* Duplicate struct and item buffer (element data copied byte-wise). */
 #define Da_dup(da_ptr)                                                                                 \
         ({                                                                                             \
-                Let cpy   = *(da_ptr);                                                                 \
+                Let cpy = *(da_ptr);                                                                   \
                 cpy.items = (Typeof(cpy.items)) malloc((da_ptr)->capacity * sizeof(da_ptr)->items[0]); \
                 memcpy(cpy.items, (da_ptr)->items, (da_ptr)->capacity * sizeof(da_ptr)->items[0]);     \
                 cpy;                                                                                   \
@@ -128,41 +133,51 @@ typedef Da(char *) Command;
 /* Append args to COMMAND. Wrapped in do/while so it is a single statement: an
  * unbraced `if (x) Command_add(&c, "a", "b");` guards all the appends. The
  * (char *) cast lets string literals in under C++. */
-#define Command_add(command, ...)                                          \
-        do {                                                               \
-                __VA_OPT__(EVAL(COMMAND_ADD_INNER(command, __VA_ARGS__));) \
+#define Command_add(command_ptr, ...)                                          \
+        do {                                                                   \
+                __VA_OPT__(EVAL(COMMAND_ADD_INNER(command_ptr, __VA_ARGS__));) \
         } while (0)
 #define COMMAND_ADD_INNER(command, a, ...) Da_append(command, (char *) (a)) __VA_OPT__(; OBSTRUCT(COMMAND_ADD_INDIRECT)()(command, __VA_ARGS__))
 #define COMMAND_ADD_INDIRECT() COMMAND_ADD_INNER
 
 #define Command_destroy Da_destroy
 
-/* Define Command_run(): run COMMAND and wait for it. Returns its exit status:
- * 127 if exec failed, 1 if fork failed or it was killed by a signal.
- * Needs <stdio.h>, <unistd.h> and <sys/wait.h>. */
-#define DECLARE_COMMAND_RUN()                                            \
-                                                                         \
-        static int Command_run(Command command)                          \
-        {                                                                \
-                if (command.count < 1) return 1;                         \
-                int status = 0;                                          \
-                int pid    = fork();                                     \
-                if (pid < 0) {                                           \
-                        perror("fork");                                  \
-                        return 1;                                        \
-                }                                                        \
-                if (pid == 0) {                                          \
-                        Da_append(&command, NULL);                       \
-                        execvp(command.items[0], command.items);         \
-                        perror(command.items[0]);                        \
-                        _exit(127); /* exit() would flush stdio twice */ \
-                }                                                        \
-                if (waitpid(pid, &status, 0) == -1) {                    \
-                        perror("waitpid");                               \
-                        return 1;                                        \
-                }                                                        \
-                return WIFEXITED(status) ? WEXITSTATUS(status) : 1;      \
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+inline static int
+Command_run_async(Command command)
+{
+        if (command.count < 1) return 0;
+        int pid = fork();
+        if (pid < 0) {
+                perror("fork");
+                return 1;
         }
+        if (pid == 0) {
+                Da_append(&command, NULL);
+                execvp(command.items[0], command.items);
+                perror(command.items[0]);
+                exit(127);
+        }
+        return pid;
+}
+
+inline static int
+Command_run(Command command)
+{
+        int status = 0;
+        if (command.count <= 0) return 1;
+        int pid = Command_run_async(command);
+        if (pid == 0) return 1;
+        if (waitpid(pid, &status, 0) == -1) {
+                perror("waitpid");
+                return 1;
+        }
+        return WIFEXITED(status) ? WEXITSTATUS(status) : 1;
+}
 
 /* Stack wrapper over DA (LIFO). */
 #define Ss Da
