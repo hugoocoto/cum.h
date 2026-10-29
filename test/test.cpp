@@ -224,6 +224,14 @@ static void test_da_foreach()
     TEST("Da_foreach mutate");
     { Da(int) da = {0}; Da_append(&da, 1); Da_append(&da, 2); Da_foreach(it, da) *it *= 10; assert(da.items[0] == 10 && da.items[1] == 20); Da_destroy(&da); }
     PASS();
+
+    TEST("Da_foreach_reverse order");
+    { Da(int) da = {0}; Da_append(&da, 1); Da_append(&da, 2); Da_append(&da, 3); int s = 0; Da_foreach_reverse(it, da) s = s * 10 + *it; assert(s == 321); Da_destroy(&da); }
+    PASS();
+
+    TEST("Da_foreach_reverse empty");
+    { Da(int) da = {0}; int c = 0; Da_foreach_reverse(it, da) c++; assert(c == 0); }
+    PASS();
 }
 
 static void test_da_index()
@@ -257,6 +265,14 @@ static void test_da_remove()
 
     TEST("Da_remove out-of-bounds (too large)");
     { Da(int) da = {0}; Da_append(&da, 1); Da_remove(&da, 5); assert(da.count == 1); Da_destroy(&da); }
+    PASS();
+
+    TEST("Da_remove index that depends on count");
+    { Da(int) da = {0}; Da_append(&da, 1); Da_append(&da, 2); Da_append(&da, 3); Da_remove(&da, da.count - 1); assert(da.count == 2 && da.items[0] == 1 && da.items[1] == 2); Da_destroy(&da); }
+    PASS();
+
+    TEST("Da_remove evaluates index once");
+    { Da(int) da = {0}; int calls = 0; Da_append(&da, 1); Da_append(&da, 2); Da_append(&da, 3); Da_remove(&da, (calls++, 1)); assert(calls == 1 && da.count == 2 && da.items[0] == 1 && da.items[1] == 3); Da_destroy(&da); }
     PASS();
 
     TEST("Da_remove shrinks count");

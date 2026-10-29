@@ -102,14 +102,17 @@
                 if ((da_ptr)->count) --(da_ptr)->count; \
         } while (0)
 
-/* Remove element at index I. */
-#define Da_remove(da_ptr, i)                                                        \
-        do {                                                                        \
-                if ((i) >= 0 && (i) < (da_ptr)->count) {                            \
-                        --(da_ptr)->count;                                          \
-                        memmove((da_ptr)->items + (i), (da_ptr)->items + (i) + 1,   \
-                                ((da_ptr)->count - (i)) * sizeof *(da_ptr)->items); \
-                }                                                                   \
+/* Remove element at index I. I is evaluated once, before the count changes,
+ * so it can depend on the DA (da.count - 1) or have side effects. */
+#define Da_remove(da_ptr, i)                                                              \
+        do {                                                                              \
+                int _da_remove_i_ = (i);                                                  \
+                if (_da_remove_i_ >= 0 && _da_remove_i_ < (da_ptr)->count) {              \
+                        --(da_ptr)->count;                                                \
+                        memmove((da_ptr)->items + _da_remove_i_,                          \
+                                (da_ptr)->items + _da_remove_i_ + 1,                      \
+                                ((da_ptr)->count - _da_remove_i_) * sizeof *(da_ptr)->items); \
+                }                                                                         \
         } while (0)
 
 /* Iterate the DA. I is a pointer to each element (from first to last). */
@@ -117,6 +120,11 @@
         for (Let _i_ = (da).items;                    \
              (int) ((_i_) - (da).items) < (da).count; \
              ++(_i_))
+
+/* Iterate the DA. I is a pointer to each element (from last to first). */
+#define Da_foreach_reverse(_i_, da)             \
+        for (Let _i_ = (da).items + (da).count; \
+             (_i_) != (da).items && ((void) --(_i_), 1);)
 
 /* Duplicate struct and item buffer (element data copied byte-wise). */
 #define Da_dup(da_ptr)                                                                                 \
@@ -198,6 +206,7 @@ Command_run(Command command)
         (_a) > (_b) ? (_a) : (_b); \
 })
 
+#define Strdup(s) memcpy(malloc(strlen((s)) + 1), (s), strlen((s)) + 1);
 #define Memdup(x) memcpy(malloc(sizeof(x)), &(x), sizeof(x))
 #define Memzero(x) memset(&(x), 0, sizeof((x)))
 
@@ -210,6 +219,13 @@ Command_run(Command command)
 #define Bf_set(n, f) ((n) |= (f))
 #define Bf_clr(n, f) ((n) &= ~(f))
 #define Bf_has(n, f) (((n) & (f)) == (f))
+
+#define Swap(a, b)         \
+        do {               \
+                Let x = b; \
+                b     = a; \
+                a     = b; \
+        } while (0)
 
 #define Tostr(x) #x
 
